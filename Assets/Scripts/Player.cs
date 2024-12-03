@@ -13,6 +13,12 @@ public class Player : MonoBehaviour
     public float groundCheckRadius = 0.2f;
     public LayerMask groundMask;
 
+    [Header("Jump Mechanics")]
+    public float coyoteTime = 0.2f;
+    public float jumpBufferTime = 0.2f;
+
+    private float jumpBuffer;
+    private float coyoteCounter;
     private bool isGrounded;
     private Rigidbody2D rb;
     private float horizontal;
@@ -29,9 +35,38 @@ public class Player : MonoBehaviour
 
         isGrounded = Physics2D.OverlapCircle(groundCheck.position, groundCheckRadius, groundMask);
 
-
-        if(isGrounded && Input.GetButtonDown("Jump"))
+        if (isGrounded)
         {
+            coyoteCounter = coyoteTime;
+        }
+        else
+        {
+            coyoteCounter -= Time.deltaTime;
+
+        }
+
+        if (Input.GetButtonDown("Jump"))
+        {
+            jumpBuffer = jumpBufferTime;
+        }
+
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            speed = 20f;
+        }
+        else if (Input.GetKeyUp(KeyCode.LeftShift))
+        {
+            speed = 10f;
+        }
+
+
+        
+
+        if(coyoteCounter > 0 && jumpBuffer > 0)
+        {
+            jumpBuffer = 0;
+
+
             var jumpVelocity = Mathf.Sqrt(jumpHeight * -2f * Physics.gravity.y);
             rb.velocity = new Vector2(rb.velocity.x, jumpVelocity);
         }
@@ -40,6 +75,11 @@ public class Player : MonoBehaviour
     private void FixedUpdate()
     {
         rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
+    }
+
+    private void OnCollisionEnter2D(Collision2D other)
+    {
+        print(other.relativeVelocity);
     }
 
     private void OnDrawGizmos()
