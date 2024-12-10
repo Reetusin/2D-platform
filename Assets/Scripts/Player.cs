@@ -23,6 +23,12 @@ public class Player : MonoBehaviour
 
     public int maxJumps = 1;
 
+    [Header("Audio")]
+    public AudioClip jumpSound; 
+    public AudioClip footstepSound; 
+    public float footstepInterval = 0.5f; 
+
+    private AudioSource audioSource;
 
     private int jumpsLeft;
     private float jumpBuffer;
@@ -34,13 +40,15 @@ public class Player : MonoBehaviour
     private bool isDashing;
     private float dashTime;
     private float dashCooldownTime;
-    
+
+    private float footstepTimer;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        audioSource = GetComponent<AudioSource>();
     }
 
-    
     void Update()
     {
         horizontal = Input.GetAxisRaw("Horizontal");
@@ -55,7 +63,6 @@ public class Player : MonoBehaviour
         else
         {
             coyoteCounter -= Time.deltaTime;
-
         }
 
         if (Input.GetButtonDown("Jump"))
@@ -63,54 +70,66 @@ public class Player : MonoBehaviour
             jumpBuffer = jumpBufferTime;
         }
 
-        
-
-
-        
-
-        if((coyoteCounter > 0 || jumpsLeft > 0) && jumpBuffer > 0)
+        if ((coyoteCounter > 0 || jumpsLeft > 0) && jumpBuffer > 0)
         {
             jumpBuffer = 0;
-
 
             var jumpVelocity = Mathf.Sqrt(jumpHeight * -2f * Physics.gravity.y);
             rb.velocity = new Vector2(rb.velocity.x, jumpVelocity);
 
+            if (audioSource != null && jumpSound != null)
+            {
+                audioSource.PlayOneShot(jumpSound);
+            }
 
-            if(!isGrounded)
+            if (!isGrounded)
             {
                 jumpsLeft--;
             }
+        }
 
-            if (Input.GetKeyDown(KeyCode.LeftShift) && dashCooldownTime <= 0)
+        if (Input.GetKeyDown(KeyCode.LeftShift) && dashCooldownTime <= 0)
+        {
+            isDashing = true;
+            dashTime = dashDuration;
+            dashCooldownTime = dashCooldown;
+        }
+
+        if (isDashing)
+        {
+            rb.velocity = new Vector2(dashSpeed * horizontal, rb.velocity.y);
+            dashTime -= Time.deltaTime;
+
+            if (dashTime <= 0)
             {
-                isDashing = true;
-                dashTime = dashDuration;
-                dashCooldownTime = dashCooldown;
+                isDashing = false;
             }
+        }
 
-            if (isDashing)
+        dashCooldownTime -= Time.deltaTime;
+
+        if (isGrounded && Mathf.Abs(horizontal) > 0.1f)
+        {
+            footstepTimer -= Time.deltaTime;
+
+            if (footstepTimer <= 0 && footstepSound != null)
             {
-                rb.velocity = new Vector2(dashSpeed * horizontal, rb.velocity.y);
-                dashTime -= Time.deltaTime;
-
-                if (dashTime <= 0)
-                {
-                    isDashing = false;
-                }
+                audioSource.PlayOneShot(footstepSound);
+                footstepTimer = footstepInterval;
             }
-            dashCooldownTime -= Time.deltaTime;
+        }
+        else
+        {
+            footstepTimer = 0;
         }
     }
-    
 
     private void FixedUpdate()
     {
-        if(!isDashing)
+        if (!isDashing)
         {
             rb.velocity = new Vector2(horizontal * speed, rb.velocity.y);
         }
-            
     }
 
     private void OnCollisionEnter2D(Collision2D other)
@@ -122,7 +141,7 @@ public class Player : MonoBehaviour
     {
         Gizmos.color = Color.red;
 
-        if (groundCheck != null )
+        if (groundCheck != null)
         {
             Gizmos.DrawWireSphere(groundCheck.position, groundCheckRadius);
         }
